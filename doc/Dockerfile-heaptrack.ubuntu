@@ -1,0 +1,51 @@
+# Use OCR platform/runtime centOS image as base image
+#
+ARG BASE_IMG=pdfium-4.1.0
+FROM $BASE_IMG
+
+USER root
+
+WORKDIR /
+
+# Install dotnet to run manage test or real OCR container process
+RUN set -xe; \
+    wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb; \
+    sudo dpkg -i packages-microsoft-prod.deb; \
+    sudo apt-get update; \
+    sudo apt-get install dotnet-runtime-3.1 -y; \
+    sudo apt-get install dotnet-sdk-3.1 -y;
+
+# Install dependencies for heaptrack
+RUN set -xe; \
+    sudo apt-get install cmake -y; \
+    sudo apt-get install make -y; \
+    sudo apt-get install libunwind-dev -y; \
+    sudo apt-get install libdwarf-dev -y; \
+    sudo apt-get install libboost-all-dev -y; \
+
+# Zstandard offers better (de)compression performance compared with gzip/zlib, making heaptrack faster and datafiles smaller.
+RUN set -xe; \
+    sudo apt-get install zstd libzstd-dev -y;
+
+
+# Install dependencies to build heaptrack_gui
+# wget http://download.qt.io/official_releases/qt/5.14/5.14.2/qt-opensource-linux-x64-5.14.2.run
+# ./qt-opensource-linux-x64-5.14.2.run 
+# export PATH=/opt/Qt5.14.2/5.14.2/gcc_64/lib/cmake/Qt5/:$PATH # This is to avoid version conflict
+
+RUN set -xe; \
+    sudo apt-get install ecm libecm-dev -y; \
+    sudo apt-get install extra-cmake-modules -y; \
+    sudo apt-get install libkchart-dev -y;
+
+WORKDIR /opt
+
+# download prebuild KF5 libraries and ECM
+
+RUN wget -c "https://github.com/chigraph/precompiled-kf5-linux/releases/download/precompiled/kf5-gcc6-linux64-release.tar.xz" && \
+    tar --strip-components=2 -xf kf5-gcc6-linux64-release.tar.xz
+
+# PATH: /opt/Qt5.14.2/5.14.2/gcc_64/lib/cmake/Qt5Xml:/opt/Qt5.14.2/5.14.2/gcc_64/lib/cmake/Qt5Network:/opt/Qt5.14.2/5.14.2/gcc_64/lib/cmake/Qt5Svg:/opt/Qt5.14.2/5.14.2/gcc_64/lib/cmake/KChart:/opt:/opt/Qt5.14.2/5.14.2/gcc_64/lib/cmake/Qt5/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+export LD_LIBRARY_PATH=/opt/Qt5.14.2/5.14.2/gcc_64/lib:$LD_LIBRARY_PATH
+export PATH=/opt/Qt5.14.2/5.14.2/gcc_64/bin:$PATH
